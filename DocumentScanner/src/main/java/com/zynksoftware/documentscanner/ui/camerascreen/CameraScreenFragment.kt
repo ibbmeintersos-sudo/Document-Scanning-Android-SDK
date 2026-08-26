@@ -146,6 +146,7 @@ internal class CameraScreenFragment : BaseFragment(), ScanSurfaceListener {
             binding.autoButton.text = getString(R.string.zdc_auto)
         } else {
             binding.autoButton.text = getString(R.string.zdc_manual)
+            binding.scanSurfaceView.cancelAutoCapture()
         }
     }
 

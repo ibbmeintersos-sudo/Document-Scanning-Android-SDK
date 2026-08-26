@@ -109,26 +109,18 @@ internal class PolygonView @JvmOverloads constructor(
     }
 
     private fun getOrderedPoints(points: List<PointF>): Map<Int, PointF> {
-        val centerPoint = PointF()
-        val size = points.size
-        for (pointF in points) {
-            centerPoint.x += pointF.x / size
-            centerPoint.y += pointF.y / size
+        if (points.size != 4) {
+            return emptyMap()
         }
+        val sortedByY = points.sortedBy { it.y }
+        val topTwo = sortedByY.take(2).sortedBy { it.x }
+        val bottomTwo = sortedByY.takeLast(2).sortedBy { it.x }
+
         val orderedPoints: MutableMap<Int, PointF> = HashMap()
-        for (pointF in points) {
-            var index = -1
-            if (pointF.x < centerPoint.x && pointF.y < centerPoint.y) {
-                index = 0
-            } else if (pointF.x > centerPoint.x && pointF.y < centerPoint.y) {
-                index = 1
-            } else if (pointF.x < centerPoint.x && pointF.y > centerPoint.y) {
-                index = 2
-            } else if (pointF.x > centerPoint.x && pointF.y > centerPoint.y) {
-                index = 3
-            }
-            orderedPoints[index] = pointF
-        }
+        orderedPoints[0] = topTwo[0]
+        orderedPoints[1] = topTwo[1]
+        orderedPoints[2] = bottomTwo[0]
+        orderedPoints[3] = bottomTwo[1]
         return orderedPoints
     }
 

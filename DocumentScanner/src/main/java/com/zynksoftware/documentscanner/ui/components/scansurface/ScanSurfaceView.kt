@@ -229,8 +229,10 @@ internal class ScanSurfaceView : FrameLayout {
             binding.scanCanvasView.clearShape()
             cancelAutoCapture()
         } else {
-            if (!isAutoCaptureScheduled) {
+            if (isAutoCaptureOn && !isAutoCaptureScheduled) {
                 scheduleAutoCapture()
+            } else if (!isAutoCaptureOn) {
+                cancelAutoCapture()
             }
             binding.scanCanvasView.showShape(previewWidth, previewHeight, points)
         }
@@ -303,7 +305,7 @@ internal class ScanSurfaceView : FrameLayout {
         }
     }
 
-    private fun cancelAutoCapture() {
+    internal fun cancelAutoCapture() {
         if (isAutoCaptureScheduled) {
             isAutoCaptureScheduled = false
             autoCaptureTimer?.cancel()

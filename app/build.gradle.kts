@@ -17,9 +17,19 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("debugConfig") {
+            storeFile = file("${rootDir}/debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         getByName("debug") {
             manifestPlaceholders["enableCrashReporting"] = "false"
+            signingConfig = signingConfigs.getByName("debugConfig")
         }
         getByName("release") {
             manifestPlaceholders["enableCrashReporting"] = "true"

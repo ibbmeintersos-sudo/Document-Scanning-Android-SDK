@@ -43,10 +43,10 @@ internal class ImageDetectionProperties(
     }
 
     private val isRightEdgeDistorted: Boolean
-        get() = abs(topRightPoint.y - bottomRightPoint.y) > 100
+        get() = abs(topRightPoint.y - bottomRightPoint.y) > previewWidth * 0.35
 
     private val isLeftEdgeDistorted: Boolean
-        get() = abs(topLeftPoint.y - bottomLeftPoint.y) > 100
+        get() = abs(topLeftPoint.y - bottomLeftPoint.y) > previewWidth * 0.35
 
     private fun getMaxCosine(approx: MatOfPoint2f): Boolean {
         var maxCosine = 0.0
@@ -72,10 +72,10 @@ internal class ImageDetectionProperties(
 
     private fun isDetectedAreaBelowLimits(): Boolean {
         return !(previewWidth / previewHeight >= 1 &&
-                resultWidth.toDouble() / resultHeight.toDouble() >= 0.9 &&
-                resultHeight.toDouble() >= 0.70 * previewHeight ||
+                resultWidth.toDouble() / resultHeight.toDouble() >= 0.3 &&
+                resultHeight.toDouble() >= 0.30 * previewHeight ||
                 previewHeight / previewWidth >= 1 &&
-                resultHeight.toDouble() / resultWidth.toDouble() >= 0.9 &&
-                resultWidth.toDouble() >= 0.70 * previewWidth)
+                resultHeight.toDouble() / resultWidth.toDouble() >= 0.3 &&
+                resultWidth.toDouble() >= 0.30 * previewWidth)
     }
 }

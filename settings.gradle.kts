@@ -7,6 +7,7 @@ pluginManagement {
     }
 }
 rootProject.name = "DocumentScannerLibrary"
-include(":DocumentScanner",
-//    ":app"
+include(
+    ":DocumentScanner",
+    ":app"
 )
