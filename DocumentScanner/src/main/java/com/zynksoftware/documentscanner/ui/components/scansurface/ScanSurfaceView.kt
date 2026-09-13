@@ -89,7 +89,7 @@ internal class ScanSurfaceView : FrameLayout {
     private var cameraProvider: ProcessCameraProvider? = null
     private lateinit var previewSize: android.util.Size
 
-    var isAutoCaptureOn: Boolean = true
+    var isAutoCaptureOn: Boolean = false
     private var isFlashEnabled: Boolean = false
     private var flashMode: Int = ImageCapture.FLASH_MODE_OFF
 
@@ -231,14 +231,13 @@ internal class ScanSurfaceView : FrameLayout {
         } else {
             if (isAutoCaptureOn && !isAutoCaptureScheduled) {
                 scheduleAutoCapture()
-            } else if (!isAutoCaptureOn) {
-                cancelAutoCapture()
             }
             binding.scanCanvasView.showShape(previewWidth, previewHeight, points)
         }
     }
 
     private fun scheduleAutoCapture() {
+        if (!isAutoCaptureOn) return
         isAutoCaptureScheduled = true
         millisLeft = 0L
         autoCaptureTimer = object : CountDownTimer(DEFAULT_TIME_POST_PICTURE, 100) {
@@ -257,7 +256,7 @@ internal class ScanSurfaceView : FrameLayout {
     }
 
     private fun autoCapture() {
-        if (isCapturing)
+        if (isCapturing || !isAutoCaptureOn)
             return
         cancelAutoCapture()
         takePicture()
@@ -305,7 +304,7 @@ internal class ScanSurfaceView : FrameLayout {
         }
     }
 
-    internal fun cancelAutoCapture() {
+    private fun cancelAutoCapture() {
         if (isAutoCaptureScheduled) {
             isAutoCaptureScheduled = false
             autoCaptureTimer?.cancel()

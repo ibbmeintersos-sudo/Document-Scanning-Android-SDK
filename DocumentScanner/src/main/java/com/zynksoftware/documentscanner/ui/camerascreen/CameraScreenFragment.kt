@@ -20,6 +20,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SO
 package com.zynksoftware.documentscanner.ui.camerascreen
 
 import android.Manifest
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -41,6 +42,7 @@ import com.zynksoftware.documentscanner.common.extensions.show
 import com.zynksoftware.documentscanner.common.utils.FileUriUtils
 import com.zynksoftware.documentscanner.databinding.FragmentCameraScreenBinding
 import com.zynksoftware.documentscanner.model.DocumentScannerErrorModel
+import com.zynksoftware.documentscanner.model.ScanType
 import com.zynksoftware.documentscanner.ui.base.BaseFragment
 import com.zynksoftware.documentscanner.ui.components.scansurface.ScanSurfaceListener
 import com.zynksoftware.documentscanner.ui.scan.InternalScanActivity
@@ -98,6 +100,9 @@ internal class CameraScreenFragment : BaseFragment(), ScanSurfaceListener {
         binding.scanSurfaceView.lifecycleOwner = this
         binding.scanSurfaceView.listener = this
         binding.scanSurfaceView.originalImageFile = getScanActivity().originalImageFile
+        binding.scanSurfaceView.isAutoCaptureOn = false
+        binding.autoButton.text = getString(R.string.zdc_manual)
+
         if (getScanActivity().galleryButtonEnabled) {
             binding.galleryButton.visibility = View.VISIBLE
         } else {
@@ -106,6 +111,7 @@ internal class CameraScreenFragment : BaseFragment(), ScanSurfaceListener {
 
         checkForCameraPermissions()
         initListeners()
+        updateModeUI()
     }
 
     override fun onDestroy() {
@@ -120,6 +126,7 @@ internal class CameraScreenFragment : BaseFragment(), ScanSurfaceListener {
         super.onResume()
         getScanActivity().reInitOriginalImageFile()
         binding.scanSurfaceView.originalImageFile = getScanActivity().originalImageFile
+        updateModeUI()
     }
 
     private fun initListeners() {
@@ -138,6 +145,37 @@ internal class CameraScreenFragment : BaseFragment(), ScanSurfaceListener {
         binding.autoButton.setOnClickListener {
             toggleAutoManualButton()
         }
+        binding.btnModeDocument.setOnClickListener {
+            val activity = getScanActivity()
+            activity.scanType = ScanType.DOCUMENT
+            activity.cardStep = 1
+            activity.firstCardBitmap = null
+            activity.secondCardBitmap = null
+            updateModeUI()
+        }
+        binding.btnModeIdCard.setOnClickListener {
+            val activity = getScanActivity()
+            activity.scanType = ScanType.ID_CARD
+            activity.cardStep = 1
+            activity.firstCardBitmap = null
+            activity.secondCardBitmap = null
+            updateModeUI()
+        }
+    }
+
+    private fun updateModeUI() {
+        val activity = getScanActivity()
+        binding.modeSelectorContainer.visibility = View.GONE
+
+        if (activity.scanType == ScanType.DOCUMENT) {
+            binding.tvScanStepHint.text = "📄 مسح وثيقة (صورة واحدة)"
+        } else {
+            if (activity.cardStep == 1) {
+                binding.tvScanStepHint.text = "🪪 مسح بطاقة: يرجى تصوير الوجه الأمامي (1/2)"
+            } else {
+                binding.tvScanStepHint.text = "🪪 مسح بطاقة: يرجى تصوير الوجه الخلفي (2/2)"
+            }
+        }
     }
 
     private fun toggleAutoManualButton() {
@@ -146,7 +184,6 @@ internal class CameraScreenFragment : BaseFragment(), ScanSurfaceListener {
             binding.autoButton.text = getString(R.string.zdc_auto)
         } else {
             binding.autoButton.text = getString(R.string.zdc_manual)
-            binding.scanSurfaceView.cancelAutoCapture()
         }
     }
 

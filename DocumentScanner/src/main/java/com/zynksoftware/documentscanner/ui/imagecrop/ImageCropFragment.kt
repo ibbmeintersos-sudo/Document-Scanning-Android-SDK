@@ -143,8 +143,7 @@ internal class ImageCropFragment : BaseFragment() {
 
     private fun getEdgePoints(tempBitmap: Bitmap): Map<Int, PointF> {
         Log.d(TAG, "ZDCgetEdgePoints Starts ${System.currentTimeMillis()}")
-        val pointFs: List<PointF> = nativeClass.getContourEdgePoints(tempBitmap)
-        return binding.polygonView.getOrderedValidEdgePoints(tempBitmap, pointFs)
+        return binding.polygonView.getOutlinePoints(tempBitmap)
     }
 
     private fun getCroppedImage() {

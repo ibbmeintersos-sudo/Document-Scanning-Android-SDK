@@ -32,6 +32,12 @@
             android:theme="@style/Theme.AppCompat.NoActionBar"
             tools:ignore="LockedOrientationActivity" />
 
+        <activity
+            android:name=".ImportDocumentActivity"
+            android:exported="false"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.AppCompat.NoActionBar" />
+
     </application>
 
 </manifest>

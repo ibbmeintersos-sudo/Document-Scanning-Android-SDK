@@ -5,6 +5,8 @@ import android.content.ContentResolver
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
+import android.graphics.pdf.PdfDocument
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -23,6 +25,7 @@ import com.fondesa.kpermissions.extension.permissionsBuilder
 import com.fondesa.kpermissions.extension.send
 import com.zynksoftware.documentscanner.ScanActivity
 import com.zynksoftware.documentscanner.model.DocumentScannerErrorModel
+import com.zynksoftware.documentscanner.model.ScanType
 import com.zynksoftware.documentscanner.model.ScannerResults
 import com.zynksoftware.documentscannersample.adapters.ImageAdapter
 import com.zynksoftware.documentscannersample.adapters.ImageAdapterListener
@@ -36,15 +39,20 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-
 class AppScanActivity : ScanActivity(), ImageAdapterListener {
     private lateinit var binding: AppScanActivityLayoutBinding
+
+    private enum class SaveFormat {
+        IMAGE, PDF
+    }
 
     companion object {
         private val TAG = AppScanActivity::class.simpleName
 
-        fun start(context: Context) {
-            val intent = Intent(context, AppScanActivity::class.java)
+        fun start(context: Context, scanType: ScanType = ScanType.DOCUMENT) {
+            val intent = Intent(context, AppScanActivity::class.java).apply {
+                putExtra(EXTRA_SCAN_TYPE, scanType.name)
+            }
             context.startActivity(intent)
         }
     }
@@ -78,15 +86,45 @@ class AppScanActivity : ScanActivity(), ImageAdapterListener {
     }
 
     override fun onSaveButtonClicked(image: File) {
-        checkForStoragePermissions(image)
+        showSaveOptionsDialog(image)
     }
 
-    private fun checkForStoragePermissions(image: File) {
-        permissionsBuilder(getWriteStoragePermission(), getReadStoragePermission())
+    private fun showSaveOptionsDialog(image: File) {
+        val options = arrayOf("🖼️ حفظ كصورة (JPG)", "📄 حفظ كمستند (PDF)")
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle("اختر صيغة الحفظ")
+            .setItems(options) { _, which ->
+                when (which) {
+                    0 -> checkForStoragePermissions(image, SaveFormat.IMAGE)
+                    1 -> checkForStoragePermissions(image, SaveFormat.PDF)
+                }
+            }
+            .setNegativeButton("إلغاء", null)
+            .show()
+    }
+
+    private fun checkForStoragePermissions(image: File, format: SaveFormat) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            if (format == SaveFormat.IMAGE) {
+                saveImage(image)
+            } else {
+                savePdf(image)
+            }
+            return
+        }
+
+        permissionsBuilder(
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.READ_EXTERNAL_STORAGE
+        )
             .build()
             .send { result ->
                 if (result.allGranted()) {
-                    saveImage(image)
+                    if (format == SaveFormat.IMAGE) {
+                        saveImage(image)
+                    } else {
+                        savePdf(image)
+                    }
                 } else if (result.allShouldShowRationale()) {
                     onError(DocumentScannerErrorModel(DocumentScannerErrorModel.ErrorMessage.STORAGE_PERMISSION_REFUSED_WITHOUT_NEVER_ASK_AGAIN))
                 } else {
@@ -95,67 +133,191 @@ class AppScanActivity : ScanActivity(), ImageAdapterListener {
             }
     }
 
-    private fun getWriteStoragePermission(): String {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            Manifest.permission.ACCESS_MEDIA_LOCATION
-        } else {
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        }
-    }
-
-    private fun getReadStoragePermission(): String {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            // NOTE: Remove empty String and uncomment READ_MEDIA_IMAGES here and in AndroidManifest.xml only for testing purposes
-            ""
-//            Manifest.permission.READ_MEDIA_IMAGES
-        } else {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                Manifest.permission.ACCESS_MEDIA_LOCATION
-            } else {
-                Manifest.permission.READ_EXTERNAL_STORAGE
+    private fun saveToCustomTreeUri(fileName: String, mimeType: String, writeBlock: (OutputStream) -> Unit): Boolean {
+        val customTreeUriStr = SettingsManager.getCustomTreeUri(this) ?: return false
+        try {
+            val treeUri = Uri.parse(customTreeUriStr)
+            val pickedDir = androidx.documentfile.provider.DocumentFile.fromTreeUri(this, treeUri)
+            if (pickedDir != null && pickedDir.exists() && pickedDir.canWrite()) {
+                val targetFile = pickedDir.createFile(mimeType, fileName)
+                if (targetFile != null) {
+                    contentResolver.openOutputStream(targetFile.uri)?.use { out ->
+                        writeBlock(out)
+                        out.flush()
+                    }
+                    return true
+                }
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed saving to custom tree uri: $customTreeUriStr", e)
         }
+        return false
     }
 
     private fun saveImage(image: File) {
         showProgressBar()
 
         val date = Date()
-        val formatter = SimpleDateFormat("dd_MM_yyyy_HH_mm_ss:mm", Locale.getDefault())
+        val formatter = SimpleDateFormat("dd_MM_yyyy_HH_mm_ss", Locale.getDefault())
         val dateFormatted = formatter.format(date)
+        val fileName = "scan_${dateFormatted}.jpg"
 
-        val to =
-            File(Environment.getExternalStorageDirectory().absolutePath + "/" + DIRECTORY_DCIM + "/zynkphoto${dateFormatted}.jpg")
-
-        val inputStream: InputStream = FileInputStream(image)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val resolver: ContentResolver = contentResolver
-            val contentValues = ContentValues()
-            contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, "zynkphoto${dateFormatted}.jpg")
-            contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/*")
-            contentValues.put(MediaStore.MediaColumns.RELATIVE_PATH, "DCIM")
-            val imageUri: Uri? =
-                resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
-            val out = resolver.openOutputStream(imageUri!!)
-            out?.write(image.readBytes())
-            out?.flush()
-            out?.close()
-        } else {
-            val out: OutputStream = FileOutputStream(to)
-
-            val buf = ByteArray(1024)
-            var len: Int
-            while (inputStream.read(buf).also { len = it } > 0) {
-                out.write(buf, 0, len)
-            }
-            inputStream.close()
-            out.flush()
-            out.close()
+        if (saveToCustomTreeUri(fileName, "image/jpeg") { out -> out.write(image.readBytes()) }) {
+            hideProgressBar()
+            val displayPath = SettingsManager.getDisplaySavePath(this)
+            showAlertDialog(
+                getString(R.string.photo_saved),
+                "تم حفظ الصورة بنجاح في المجلد المخصص:\n$displayPath/$fileName",
+                getString(R.string.ok_label)
+            )
+            return
         }
 
-        hideProgressBar()
-        showAlertDialog(getString(R.string.photo_saved), "", getString(R.string.ok_label))
+        val folderType = SettingsManager.getFolderType(this)
+        val subfolderName = SettingsManager.getSubfolderName(this)
+
+        val relativePath = if (subfolderName.isNotEmpty()) {
+            "$folderType/$subfolderName"
+        } else {
+            folderType
+        }
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val resolver: ContentResolver = contentResolver
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+                }
+                val imageUri: Uri? = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                if (imageUri != null) {
+                    resolver.openOutputStream(imageUri)?.use { out ->
+                        out.write(image.readBytes())
+                        out.flush()
+                    }
+                }
+            } else {
+                val targetDir = File(Environment.getExternalStorageDirectory(), relativePath)
+                if (!targetDir.exists()) {
+                    targetDir.mkdirs()
+                }
+                val targetFile = File(targetDir, fileName)
+                FileOutputStream(targetFile).use { out ->
+                    out.write(image.readBytes())
+                    out.flush()
+                }
+            }
+            hideProgressBar()
+            showAlertDialog(
+                getString(R.string.photo_saved),
+                "تم حفظ الصورة بنجاح في:\n$relativePath/$fileName",
+                getString(R.string.ok_label)
+            )
+        } catch (e: Exception) {
+            hideProgressBar()
+            showAlertDialog(
+                getString(R.string.error_label),
+                "حدث خطأ أثناء الحفظ: ${e.localizedMessage}",
+                getString(R.string.ok_label)
+            )
+        }
+    }
+
+    private fun savePdf(image: File) {
+        showProgressBar()
+
+        val date = Date()
+        val formatter = SimpleDateFormat("dd_MM_yyyy_HH_mm_ss", Locale.getDefault())
+        val dateFormatted = formatter.format(date)
+        val pdfFileName = "scan_${dateFormatted}.pdf"
+
+        try {
+            val bitmap = BitmapFactory.decodeFile(image.absolutePath)
+            if (bitmap == null) {
+                hideProgressBar()
+                showAlertDialog(getString(R.string.error_label), "تعذر قراءة الصورة لإنشاء ملف PDF", getString(R.string.ok_label))
+                return
+            }
+
+            val pdfDocument = PdfDocument()
+            val pageInfo = PdfDocument.PageInfo.Builder(bitmap.width, bitmap.height, 1).create()
+            val page = pdfDocument.startPage(pageInfo)
+            val canvas = page.canvas
+            canvas.drawBitmap(bitmap, 0f, 0f, null)
+            pdfDocument.finishPage(page)
+
+            if (saveToCustomTreeUri(pdfFileName, "application/pdf") { out -> pdfDocument.writeTo(out) }) {
+                pdfDocument.close()
+                hideProgressBar()
+                val displayPath = SettingsManager.getDisplaySavePath(this)
+                showAlertDialog(
+                    getString(R.string.photo_saved),
+                    "تم حفظ مستند PDF بنجاح في المجلد المخصص:\n$displayPath/$pdfFileName",
+                    getString(R.string.ok_label)
+                )
+                return
+            }
+
+            val folderType = SettingsManager.getFolderType(this)
+            val subfolderName = SettingsManager.getSubfolderName(this)
+
+            val relativePath = if (subfolderName.isNotEmpty()) {
+                "$folderType/$subfolderName"
+            } else {
+                folderType
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val resolver: ContentResolver = contentResolver
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, pdfFileName)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "application/pdf")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
+                }
+                val pdfUri: Uri? = try {
+                    resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, contentValues)
+                } catch (e: Exception) {
+                    null
+                } ?: try {
+                    resolver.insert(MediaStore.Files.getContentUri("external"), contentValues)
+                } catch (e: Exception) {
+                    null
+                }
+
+                if (pdfUri != null) {
+                    resolver.openOutputStream(pdfUri)?.use { out ->
+                        pdfDocument.writeTo(out)
+                        out.flush()
+                    }
+                }
+            } else {
+                val targetDir = File(Environment.getExternalStorageDirectory(), relativePath)
+                if (!targetDir.exists()) {
+                    targetDir.mkdirs()
+                }
+                val targetFile = File(targetDir, pdfFileName)
+                FileOutputStream(targetFile).use { out ->
+                    pdfDocument.writeTo(out)
+                    out.flush()
+                }
+            }
+            pdfDocument.close()
+
+            hideProgressBar()
+            showAlertDialog(
+                getString(R.string.photo_saved),
+                "تم حفظ مستند PDF بنجاح في:\n$relativePath/$pdfFileName",
+                getString(R.string.ok_label)
+            )
+        } catch (e: Exception) {
+            hideProgressBar()
+            showAlertDialog(
+                getString(R.string.error_label),
+                "حدث خطأ أثناء حفظ ملف PDF: ${e.localizedMessage}",
+                getString(R.string.ok_label)
+            )
+        }
     }
 
     private fun showProgressBar() {

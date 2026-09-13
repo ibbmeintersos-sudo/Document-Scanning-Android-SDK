@@ -73,7 +73,9 @@ internal class ImageProcessingFragment : BaseFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.imagePreview.setImageBitmap(getScanActivity().croppedImage)
+        getScanActivity()?.croppedImage?.let {
+            binding.imagePreview.setImageBitmap(it)
+        }
 
         initListeners()
     }
@@ -93,29 +95,41 @@ internal class ImageProcessingFragment : BaseFragment() {
         }
     }
 
-    private fun getScanActivity(): InternalScanActivity {
-        return (requireActivity() as InternalScanActivity)
+    private fun getScanActivity(): InternalScanActivity? {
+        return activity as? InternalScanActivity
     }
 
     @OptIn(DelicateCoroutinesApi::class)
     private fun rotateImage() {
         Log.d(TAG, "ZDCrotate starts ${System.currentTimeMillis()}")
+        val scanActivity = getScanActivity() ?: return
         showProgressBar()
         GlobalScope.launch(Dispatchers.IO) {
-            if (isAdded) {
-                getScanActivity().transformedImage =
-                    getScanActivity().transformedImage?.rotateBitmap(ANGLE_OF_ROTATION)
-                getScanActivity().croppedImage =
-                    getScanActivity().croppedImage?.rotateBitmap(ANGLE_OF_ROTATION)
-            }
+            try {
+                val rotatedTransformed = scanActivity.transformedImage?.rotateBitmap(ANGLE_OF_ROTATION)
+                val rotatedCropped = scanActivity.croppedImage?.rotateBitmap(ANGLE_OF_ROTATION)
 
-            if (isAdded) {
-                getScanActivity().runOnUiThread {
-                    hideProgressBar()
-                    if (isInverted) {
-                        binding.imagePreview.setImageBitmap(getScanActivity().transformedImage)
-                    } else {
-                        binding.imagePreview.setImageBitmap(getScanActivity().croppedImage)
+                scanActivity.runOnUiThread {
+                    if (isAdded && !isRemoving) {
+                        hideProgressBar()
+                        if (rotatedTransformed != null) {
+                            scanActivity.transformedImage = rotatedTransformed
+                        }
+                        if (rotatedCropped != null) {
+                            scanActivity.croppedImage = rotatedCropped
+                        }
+                        if (isInverted && scanActivity.transformedImage != null) {
+                            binding.imagePreview.setImageBitmap(scanActivity.transformedImage)
+                        } else {
+                            binding.imagePreview.setImageBitmap(scanActivity.croppedImage)
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "Error rotating image", e)
+                scanActivity.runOnUiThread {
+                    if (isAdded && !isRemoving) {
+                        hideProgressBar()
                     }
                 }
             }
@@ -124,48 +138,81 @@ internal class ImageProcessingFragment : BaseFragment() {
     }
 
     private fun closeFragment() {
-        getScanActivity().closeCurrentFragment()
+        getScanActivity()?.closeCurrentFragment()
     }
 
     @OptIn(DelicateCoroutinesApi::class)
     private fun applyGrayScaleFilter() {
         Log.d(TAG, "ZDCgrayscale starts ${System.currentTimeMillis()}")
+        val scanActivity = getScanActivity() ?: return
+        val cropped = scanActivity.croppedImage
+        if (cropped == null || cropped.isRecycled) {
+            Log.e(TAG, "croppedImage is null or recycled")
+            return
+        }
+
         showProgressBar()
         GlobalScope.launch(Dispatchers.IO) {
-            if (isAdded) {
+            try {
                 if (!isInverted) {
-                    val bmpMonochrome = Bitmap.createBitmap(
-                        getScanActivity().croppedImage!!.width,
-                        getScanActivity().croppedImage!!.height,
-                        Bitmap.Config.ARGB_8888
-                    )
-                    val canvas = Canvas(bmpMonochrome)
-                    val ma = ColorMatrix()
-                    ma.setSaturation(0f)
-                    val paint = Paint()
-                    paint.colorFilter = ColorMatrixColorFilter(ma)
-                    getScanActivity().croppedImage?.let { canvas.drawBitmap(it, 0f, 0f, paint) }
-                    getScanActivity().transformedImage =
-                        bmpMonochrome.config?.let { bmpMonochrome.copy(it, true) }
-                    getScanActivity().runOnUiThread {
-                        hideProgressBar()
-                        binding.imagePreview.setImageBitmap(getScanActivity().transformedImage)
+                    val width = cropped.width
+                    val height = cropped.height
+                    if (width > 0 && height > 0) {
+                        val bmpMonochrome = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+                        val canvas = Canvas(bmpMonochrome)
+                        
+                        val ma = ColorMatrix()
+                        ma.setSaturation(0f)
+                        
+                        // Enhance contrast for document text readability
+                        val contrast = 1.35f
+                        val translate = (-0.5f * contrast + 0.5f) * 255f + 15f
+                        val contrastMatrix = ColorMatrix(floatArrayOf(
+                            contrast, 0f, 0f, 0f, translate,
+                            0f, contrast, 0f, 0f, translate,
+                            0f, 0f, contrast, 0f, translate,
+                            0f, 0f, 0f, 1f, 0f
+                        ))
+                        contrastMatrix.postConcat(ma)
+
+                        val paint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+                            colorFilter = ColorMatrixColorFilter(contrastMatrix)
+                        }
+                        
+                        canvas.drawBitmap(cropped, 0f, 0f, paint)
+                        scanActivity.transformedImage = bmpMonochrome
+
+                        scanActivity.runOnUiThread {
+                            if (isAdded && !isRemoving) {
+                                hideProgressBar()
+                                binding.imagePreview.setImageBitmap(scanActivity.transformedImage)
+                            }
+                        }
                     }
                 } else {
-                    getScanActivity().runOnUiThread {
-                        hideProgressBar()
-                        binding.imagePreview.setImageBitmap(getScanActivity().croppedImage)
-                        getScanActivity().transformedImage = null
+                    scanActivity.runOnUiThread {
+                        if (isAdded && !isRemoving) {
+                            hideProgressBar()
+                            binding.imagePreview.setImageBitmap(scanActivity.croppedImage)
+                            scanActivity.transformedImage = null
+                        }
                     }
                 }
                 isInverted = !isInverted
-                Log.d(TAG, "ZDCgrayscale ends ${System.currentTimeMillis()}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Error applying grayscale filter", e)
+                scanActivity.runOnUiThread {
+                    if (isAdded && !isRemoving) {
+                        hideProgressBar()
+                    }
+                }
             }
+            Log.d(TAG, "ZDCgrayscale ends ${System.currentTimeMillis()}")
         }
     }
 
     private fun selectFinalScannerResults() {
-        getScanActivity().finalScannerResult()
+        getScanActivity()?.handleScanStep()
     }
 
     override fun configureEdgeToEdgeInsets(insets: WindowInsetsCompat) {

@@ -8,7 +8,7 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.zynksoftware.documentscannersample"
+        applicationId = "com.aistudio.documentscanner.wzkp"
         minSdk = 26
         targetSdk = 35
         versionCode = 10
@@ -17,19 +17,9 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
-    signingConfigs {
-        create("debugConfig") {
-            storeFile = file("${rootDir}/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
-    }
-
     buildTypes {
         getByName("debug") {
             manifestPlaceholders["enableCrashReporting"] = "false"
-            signingConfig = signingConfigs.getByName("debugConfig")
         }
         getByName("release") {
             manifestPlaceholders["enableCrashReporting"] = "true"
@@ -70,5 +60,8 @@ dependencies {
     implementation(libs.rxandroid)
     implementation(libs.viewpager2)
     implementation(libs.photo.view)
+    implementation(libs.pdfbox.android)
+    implementation("androidx.documentfile:documentfile:1.0.1")
+    implementation("com.google.android.material:material:1.12.0")
     implementation(project(":DocumentScanner"))
 }

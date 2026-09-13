@@ -69,11 +69,7 @@ internal class PolygonView @JvmOverloads constructor(
     }
 
     fun getOrderedValidEdgePoints(tempBitmap: Bitmap, pointFs: List<PointF>): Map<Int, PointF> {
-        var orderedPoints: Map<Int, PointF> = getOrderedPoints(pointFs)
-        if (!isValidShape(orderedPoints)) {
-            orderedPoints = getOutlinePoints(tempBitmap)
-        }
-        return orderedPoints
+        return getOutlinePoints(tempBitmap)
     }
 
     fun setPoints(pointFMap: Map<Int, PointF>) {
@@ -95,7 +91,7 @@ internal class PolygonView @JvmOverloads constructor(
         return pointFMap.size == 4
     }
 
-    private fun getOutlinePoints(tempBitmap: Bitmap): Map<Int, PointF> {
+    fun getOutlinePoints(tempBitmap: Bitmap): Map<Int, PointF> {
         val offsetWidth = (tempBitmap.width / THREE_PARTS).toFloat()
         val offsetHeight = (tempBitmap.height / THREE_PARTS).toFloat()
         val screenXCenter = tempBitmap.width / HALF
@@ -109,18 +105,26 @@ internal class PolygonView @JvmOverloads constructor(
     }
 
     private fun getOrderedPoints(points: List<PointF>): Map<Int, PointF> {
-        if (points.size != 4) {
-            return emptyMap()
+        val centerPoint = PointF()
+        val size = points.size
+        for (pointF in points) {
+            centerPoint.x += pointF.x / size
+            centerPoint.y += pointF.y / size
         }
-        val sortedByY = points.sortedBy { it.y }
-        val topTwo = sortedByY.take(2).sortedBy { it.x }
-        val bottomTwo = sortedByY.takeLast(2).sortedBy { it.x }
-
         val orderedPoints: MutableMap<Int, PointF> = HashMap()
-        orderedPoints[0] = topTwo[0]
-        orderedPoints[1] = topTwo[1]
-        orderedPoints[2] = bottomTwo[0]
-        orderedPoints[3] = bottomTwo[1]
+        for (pointF in points) {
+            var index = -1
+            if (pointF.x < centerPoint.x && pointF.y < centerPoint.y) {
+                index = 0
+            } else if (pointF.x > centerPoint.x && pointF.y < centerPoint.y) {
+                index = 1
+            } else if (pointF.x < centerPoint.x && pointF.y > centerPoint.y) {
+                index = 2
+            } else if (pointF.x > centerPoint.x && pointF.y > centerPoint.y) {
+                index = 3
+            }
+            orderedPoints[index] = pointF
+        }
         return orderedPoints
     }
 

@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#0F172A"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <!-- Title Header -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="⚙️ إعدادات مجلد الحفظ"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginBottom="16dp"
+            android:text="اختر المجلد المفضل لديك لحفظ الصور ومستندات PDF"
+            android:textColor="#94A3B8"
+            android:textSize="12sp" />
+
+        <!-- System Folder Picker Option -->
+        <LinearLayout
+            android:id="@+id/btnPickSystemFolder"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_pill_button_blue"
+            android:clickable="true"
+            android:focusable="true"
+            android:foreground="?android:attr/selectableItemBackground"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="14dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📁"
+                android:textSize="18sp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:text="اختيار مجلد مخصص من ذاكرة الجهاز..."
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- Divider -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginVertical="16dp"
+            android:gravity="center"
+            android:text="───── أو اختر مجلد افتراضي ─────"
+            android:textColor="#64748B"
+            android:textSize="12sp" />
+
+        <!-- Standard Folder Options -->
+        <RadioGroup
+            android:id="@+id/rgDefaultFolders"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <RadioButton
+                android:id="@+id/rbDocuments"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingVertical="8dp"
+                android:text="📄 المستندات (Documents)"
+                android:textColor="#E2E8F0"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/rbPictures"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingVertical="8dp"
+                android:text="🖼️ الصور (Pictures)"
+                android:textColor="#E2E8F0"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/rbDcim"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingVertical="8dp"
+                android:text="📷 المعرض/الكاميرا (DCIM)"
+                android:textColor="#E2E8F0"
+                android:textSize="14sp" />
+
+            <RadioButton
+                android:id="@+id/rbDownload"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingVertical="8dp"
+                android:text="📥 التنزيلات (Download)"
+                android:textColor="#E2E8F0"
+                android:textSize="14sp" />
+        </RadioGroup>
+
+        <!-- Subfolder Input -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:layout_marginBottom="6dp"
+            android:text="اسم المجلد الفرعي (اختياري):"
+            android:textColor="#CBD5E1"
+            android:textSize="13sp" />
+
+        <EditText
+            android:id="@+id/etSubfolder"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_folder_card"
+            android:hint="مثال: DocumentScanner"
+            android:textColor="#FFFFFF"
+            android:textColorHint="#64748B"
+            android:padding="12dp"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+</ScrollView>

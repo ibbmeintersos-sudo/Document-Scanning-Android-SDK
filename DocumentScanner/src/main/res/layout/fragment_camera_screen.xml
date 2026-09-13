@@ -41,9 +41,60 @@
                 android:layout_centerVertical="true"
                 android:layout_marginEnd="12sp"
                 android:padding="@dimen/zdc_x_small_padding"
-                android:text="@string/zdc_auto" />
+                android:text="@string/zdc_manual" />
 
         </RelativeLayout>
+
+        <!-- Mode Selector Container (Document vs ID Card) -->
+        <LinearLayout
+            android:id="@+id/modeSelectorContainer"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/topBar"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="4dp"
+            android:background="#66000000"
+            android:orientation="horizontal"
+            android:padding="4dp">
+
+            <TextView
+                android:id="@+id/btnModeDocument"
+                style="@style/ZdcTextView14sp.White"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="#33FFFFFF"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="6dp"
+                android:text="📄 مسح وثيقة"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/btnModeIdCard"
+                style="@style/ZdcTextView14sp.White"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="6dp"
+                android:text="🪪 مسح بطاقة"
+                android:textColor="#CCCCCC" />
+        </LinearLayout>
+
+        <!-- Step Hint Indicator -->
+        <TextView
+            android:id="@+id/tvScanStepHint"
+            style="@style/ZdcTextView14sp.White"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/modeSelectorContainer"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="8dp"
+            android:background="#88000000"
+            android:paddingHorizontal="16dp"
+            android:paddingVertical="6dp"
+            android:text="📸 قم بالتقاط صورة الوثيقة"
+            android:textColor="#FFFFFF"
+            android:textSize="13sp" />
 
         <RelativeLayout
             android:id="@+id/bottomBar"
